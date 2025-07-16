@@ -333,60 +333,72 @@
     </div>
 
     <script>
-        // Model database with energy profiles
+        // Model database with REAL energy profiles based on research
         const models = {
+            'gpt-4o': {
+                name: 'GPT-4o (ChatGPT)',
+                provider: 'OpenAI',
+                parameters: '~1.8T',
+                energyPerQuery: 0.0003, // kWh per query (Epoch AI 2025)
+                energyPerToken: 0.000006, // Calculated from average query
+                baseEnergy: 0.0002,
+                description: 'Latest ChatGPT model - 0.3 Wh per query',
+                source: 'Epoch AI (Feb 2025)',
+                apiStatus: 'online'
+            },
+            'gpt-4': {
+                name: 'GPT-4',
+                provider: 'OpenAI',
+                parameters: '1.8T',
+                energyPerQuery: 0.0005, // kWh per query (Baeldung 2024)
+                energyPerToken: 0.00001,
+                baseEnergy: 0.0003,
+                description: 'Previous generation - 0.5 Wh per query',
+                source: 'Baeldung (2024)',
+                apiStatus: 'online'
+            },
             'gpt-3.5-turbo': {
                 name: 'GPT-3.5 Turbo',
                 provider: 'OpenAI',
                 parameters: '175B',
-                energyPerToken: 0.0002, // kWh per token
-                baseEnergy: 0.001, // kWh base consumption
-                description: 'Fast and efficient for most tasks',
+                energyPerQuery: 0.0003, // kWh per query (Baeldung 2024)
+                energyPerToken: 0.000006,
+                baseEnergy: 0.0002,
+                description: 'Efficient for most tasks - 0.3 Wh per query',
+                source: 'Baeldung (2024)',
+                apiStatus: 'online'
+            },
+            'llama-65b': {
+                name: 'LLaMA 65B',
+                provider: 'Meta',
+                parameters: '65B',
+                energyPerQuery: 0.0004, // Estimated from 3-4J per token
+                energyPerToken: 0.000001, // 3-4 joules = 0.001 Wh per token
+                baseEnergy: 0.0002,
+                description: 'Research measurements: 3-4J per token',
+                source: 'Samsi et al. (2023)',
                 apiStatus: 'online'
             },
             'llama-2-7b': {
                 name: 'Llama 2 7B',
                 provider: 'Meta',
                 parameters: '7B',
-                energyPerToken: 0.00008,
-                baseEnergy: 0.0005,
-                description: 'Open source, efficient for smaller tasks',
-                apiStatus: 'online'
-            },
-            'llama-2-13b': {
-                name: 'Llama 2 13B',
-                provider: 'Meta',
-                parameters: '13B',
-                energyPerToken: 0.00015,
-                baseEnergy: 0.0008,
-                description: 'Balanced performance and efficiency',
+                energyPerQuery: 0.00015, // Scaled from 65B model
+                energyPerToken: 0.0000003,
+                baseEnergy: 0.0001,
+                description: 'Efficient open source model',
+                source: 'Scaled from research',
                 apiStatus: 'online'
             },
             'claude-3-sonnet': {
                 name: 'Claude 3 Sonnet',
                 provider: 'Anthropic',
                 parameters: '~200B',
-                energyPerToken: 0.00025,
-                baseEnergy: 0.0012,
-                description: 'High quality reasoning and analysis',
-                apiStatus: 'online'
-            },
-            'mistral-7b': {
-                name: 'Mistral 7B',
-                provider: 'Mistral AI',
-                parameters: '7B',
-                energyPerToken: 0.00009,
-                baseEnergy: 0.0004,
-                description: 'Efficient open source model',
-                apiStatus: 'online'
-            },
-            'codellama-34b': {
-                name: 'CodeLlama 34B',
-                provider: 'Meta',
-                parameters: '34B',
-                energyPerToken: 0.0003,
-                baseEnergy: 0.0015,
-                description: 'Specialized for code generation',
+                energyPerQuery: 0.00035, // Estimated similar to GPT-4
+                energyPerToken: 0.000007,
+                baseEnergy: 0.0002,
+                description: 'High quality reasoning - estimated ~0.35 Wh',
+                source: 'Estimated (no public data)',
                 apiStatus: 'online'
             }
         };
@@ -400,7 +412,7 @@
             'asia-pacific': 0.45
         };
 
-        let selectedModel = 'llama-2-7b';
+        let selectedModel = 'gpt-4o';
 
         // Initialize the app
         function init() {
@@ -425,7 +437,8 @@
                     </div>
                     <p>${model.description}</p>
                     <div class="energy-info">
-                        <strong>Energy:</strong> ${(model.energyPerToken * 1000).toFixed(3)} mWh/token
+                        <strong>Energy:</strong> ${(model.energyPerQuery * 1000).toFixed(2)} Wh/query<br>
+                        <strong>Source:</strong> ${model.source}
                     </div>
                     <div class="api-status">
                         <div class="status-dot ${model.apiStatus === 'online' ? '' : 'offline'}"></div>
@@ -449,26 +462,25 @@
             return Math.ceil(text.length / 4);
         }
 
-        // Calculate energy consumption
+        // Calculate energy consumption using real research data
         function calculateEnergy(prompt, modelKey, location) {
             const model = models[modelKey];
             const tokens = estimateTokens(prompt);
             
-            // Estimate output tokens based on prompt complexity
-            const outputTokens = Math.min(tokens * 2, 1000); // Assume 2x input or max 1000
-            const totalTokens = tokens + outputTokens;
+            // Use actual research-based energy consumption
+            // Most research reports per-query energy, not per-token
+            const baseQueryEnergy = model.energyPerQuery; // kWh
+            const additionalTokenEnergy = Math.max(0, tokens - 50) * model.energyPerToken; // Extra tokens beyond typical query
             
-            // Calculate energy consumption
-            const tokenEnergy = totalTokens * model.energyPerToken;
-            const totalEnergy = model.baseEnergy + tokenEnergy; // kWh
+            const totalEnergy = baseQueryEnergy + additionalTokenEnergy; // kWh
             
             // Calculate carbon emissions
             const carbonEmissions = totalEnergy * carbonIntensity[location]; // kg CO2
             
             return {
                 inputTokens: tokens,
-                outputTokens: outputTokens,
-                totalTokens: totalTokens,
+                outputTokens: Math.min(tokens * 1.5, 500), // Conservative output estimate
+                totalTokens: tokens + Math.min(tokens * 1.5, 500),
                 energyConsumption: totalEnergy,
                 carbonEmissions: carbonEmissions,
                 model: model
@@ -537,17 +549,53 @@
             
             let comparisons = [];
             
-            if (energyWh > 10) {
-                comparisons.push(`${(energyWh / 11).toFixed(1)} LED bulbs for 1 hour`);
+            // LED bulb comparison (11W LED bulb)
+            if (energyWh >= 0.1) {
+                const minutes = (energyWh / 11) * 60;
+                if (minutes >= 1) {
+                    comparisons.push(`${minutes.toFixed(1)} minutes of an LED bulb`);
+                } else {
+                    comparisons.push(`${(minutes * 60).toFixed(0)} seconds of an LED bulb`);
+                }
             }
-            if (energyWh > 0.5) {
-                comparisons.push(`${(energyWh / 0.5).toFixed(1)} smartphone charges`);
+            
+            // Smartphone charge comparison (typical phone battery ~15Wh)
+            if (energyWh >= 0.01) {
+                const percentage = (energyWh / 15) * 100;
+                if (percentage >= 1) {
+                    comparisons.push(`${percentage.toFixed(1)}% of a smartphone charge`);
+                } else {
+                    comparisons.push(`${(percentage * 10).toFixed(1)} per-mille of a smartphone charge`);
+                }
             }
-            if (carbonG > 100) {
-                comparisons.push(`${(carbonG / 411).toFixed(2)} km of driving`);
+            
+            // Google search comparison (~0.2Wh per search)
+            if (energyWh >= 0.02) {
+                comparisons.push(`${(energyWh / 0.2).toFixed(1)} Google searches`);
             }
-            if (carbonG > 10) {
-                comparisons.push(`${(carbonG / 21).toFixed(1)} Google searches`);
+            
+            // Electric car comparison (200Wh per km)
+            if (energyWh >= 0.1) {
+                const meters = (energyWh / 200) * 1000;
+                if (meters >= 1) {
+                    comparisons.push(`${meters.toFixed(1)} meters of electric car driving`);
+                } else {
+                    comparisons.push(`${(meters * 100).toFixed(1)} centimeters of electric car driving`);
+                }
+            }
+            
+            // Microwave comparison (1000W microwave)
+            if (energyWh >= 0.5) {
+                const seconds = (energyWh / 1000) * 3600;
+                comparisons.push(`${seconds.toFixed(1)} seconds of microwave usage`);
+            }
+            
+            // If still no comparisons, add very small scale ones
+            if (comparisons.length === 0) {
+                comparisons.push(`${(energyWh * 3600).toFixed(0)} joules of energy`);
+                if (carbonG >= 0.1) {
+                    comparisons.push(`${carbonG.toFixed(2)} grams of CO2`);
+                }
             }
 
             comparison.innerHTML = `
