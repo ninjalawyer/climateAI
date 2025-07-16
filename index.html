@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Energy Consumption Estimator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        textarea, select, input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        textarea:focus, select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .model-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .model-card {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .model-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .model-card.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .model-card h3 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .model-specs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .spec-tag {
+            background: #e2e8f0;
+            color: #4a5568;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .energy-info {
+            background: #e6fffa;
+            border: 1px solid #81e6d9;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        .energy-info strong {
+            color: #2c7a7b;
+        }
+
+        .estimate-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            font-weight: 600;
+        }
+
+        .estimate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .estimate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 30px;
+            margin-top: 30px;
+            border-left: 4px solid #667eea;
+        }
+
+        .results h2 {
+            color: #2d3748;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .result-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .result-card h3 {
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .result-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .result-unit {
+            color: #718096;
+            font-size: 0.9em;
+        }
+
+        .comparison {
+            background: #fff5f5;
+            border: 1px solid #fed7d7;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .comparison h4 {
+            color: #c53030;
+            margin-bottom: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .api-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #68d391;
+        }
+
+        .status-dot.offline {
+            background: #fc8181;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .model-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔋 AI Energy Estimator</h1>
+            <p>Estimate the energy consumption and carbon footprint of your AI prompts</p>
+        </div>
+
+        <div class="main-content">
+            <div class="input-section">
+                <div class="form-group">
+                    <label for="prompt">Enter your AI prompt:</label>
+                    <textarea id="prompt" placeholder="Type your prompt here... (e.g., 'Write a 500-word article about renewable energy')" maxlength="2000"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="location">Server Location (affects carbon intensity):</label>
+                    <select id="location">
+                        <option value="us-east">US East (Virginia) - 0.35 kg CO2/kWh</option>
+                        <option value="us-west">US West (California) - 0.25 kg CO2/kWh</option>
+                        <option value="eu-central">EU Central (Germany) - 0.40 kg CO2/kWh</option>
+                        <option value="eu-north">EU North (Sweden) - 0.08 kg CO2/kWh</option>
+                        <option value="asia-pacific">Asia Pacific (Singapore) - 0.45 kg CO2/kWh</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Select AI Model:</label>
+                    <div class="model-grid" id="modelGrid">
+                        <!-- Models will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <button class="estimate-btn" id="estimateBtn" onclick="estimateEnergy()">
+                    Calculate Energy Consumption
+                </button>
+            </div>
+
+            <div id="results" class="results" style="display: none;">
+                <h2>Energy Consumption Estimate</h2>
+                <div class="result-grid" id="resultGrid">
+                    <!-- Results will be populated by JavaScript -->
+                </div>
+                <div class="comparison" id="comparison">
+                    <!-- Comparison will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Model database with energy profiles
+        const models = {
+            'gpt-3.5-turbo': {
+                name: 'GPT-3.5 Turbo',
+                provider: 'OpenAI',
+                parameters: '175B',
+                energyPerToken: 0.0002, // kWh per token
+                baseEnergy: 0.001, // kWh base consumption
+                description: 'Fast and efficient for most tasks',
+                apiStatus: 'online'
+            },
+            'llama-2-7b': {
+                name: 'Llama 2 7B',
+                provider: 'Meta',
+                parameters: '7B',
+                energyPerToken: 0.00008,
+                baseEnergy: 0.0005,
+                description: 'Open source, efficient for smaller tasks',
+                apiStatus: 'online'
+            },
+            'llama-2-13b': {
+                name: 'Llama 2 13B',
+                provider: 'Meta',
+                parameters: '13B',
+                energyPerToken: 0.00015,
+                baseEnergy: 0.0008,
+                description: 'Balanced performance and efficiency',
+                apiStatus: 'online'
+            },
+            'claude-3-sonnet': {
+                name: 'Claude 3 Sonnet',
+                provider: 'Anthropic',
+                parameters: '~200B',
+                energyPerToken: 0.00025,
+                baseEnergy: 0.0012,
+                description: 'High quality reasoning and analysis',
+                apiStatus: 'online'
+            },
+            'mistral-7b': {
+                name: 'Mistral 7B',
+                provider: 'Mistral AI',
+                parameters: '7B',
+                energyPerToken: 0.00009,
+                baseEnergy: 0.0004,
+                description: 'Efficient open source model',
+                apiStatus: 'online'
+            },
+            'codellama-34b': {
+                name: 'CodeLlama 34B',
+                provider: 'Meta',
+                parameters: '34B',
+                energyPerToken: 0.0003,
+                baseEnergy: 0.0015,
+                description: 'Specialized for code generation',
+                apiStatus: 'online'
+            }
+        };
+
+        // Carbon intensity by location (kg CO2 per kWh)
+        const carbonIntensity = {
+            'us-east': 0.35,
+            'us-west': 0.25,
+            'eu-central': 0.40,
+            'eu-north': 0.08,
+            'asia-pacific': 0.45
+        };
+
+        let selectedModel = 'llama-2-7b';
+
+        // Initialize the app
+        function init() {
+            renderModelGrid();
+        }
+
+        // Render model selection grid
+        function renderModelGrid() {
+            const grid = document.getElementById('modelGrid');
+            grid.innerHTML = '';
+
+            Object.entries(models).forEach(([key, model]) => {
+                const card = document.createElement('div');
+                card.className = `model-card ${key === selectedModel ? 'selected' : ''}`;
+                card.onclick = () => selectModel(key);
+                
+                card.innerHTML = `
+                    <h3>${model.name}</h3>
+                    <div class="model-specs">
+                        <span class="spec-tag">${model.parameters}</span>
+                        <span class="spec-tag">${model.provider}</span>
+                    </div>
+                    <p>${model.description}</p>
+                    <div class="energy-info">
+                        <strong>Energy:</strong> ${(model.energyPerToken * 1000).toFixed(3)} mWh/token
+                    </div>
+                    <div class="api-status">
+                        <div class="status-dot ${model.apiStatus === 'online' ? '' : 'offline'}"></div>
+                        <span>${model.apiStatus}</span>
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+
+        // Select a model
+        function selectModel(modelKey) {
+            selectedModel = modelKey;
+            renderModelGrid();
+        }
+
+        // Estimate token count (simplified)
+        function estimateTokens(text) {
+            // Rough approximation: 1 token ≈ 4 characters for English
+            return Math.ceil(text.length / 4);
+        }
+
+        // Calculate energy consumption
+        function calculateEnergy(prompt, modelKey, location) {
+            const model = models[modelKey];
+            const tokens = estimateTokens(prompt);
+            
+            // Estimate output tokens based on prompt complexity
+            const outputTokens = Math.min(tokens * 2, 1000); // Assume 2x input or max 1000
+            const totalTokens = tokens + outputTokens;
+            
+            // Calculate energy consumption
+            const tokenEnergy = totalTokens * model.energyPerToken;
+            const totalEnergy = model.baseEnergy + tokenEnergy; // kWh
+            
+            // Calculate carbon emissions
+            const carbonEmissions = totalEnergy * carbonIntensity[location]; // kg CO2
+            
+            return {
+                inputTokens: tokens,
+                outputTokens: outputTokens,
+                totalTokens: totalTokens,
+                energyConsumption: totalEnergy,
+                carbonEmissions: carbonEmissions,
+                model: model
+            };
+        }
+
+        // Main estimation function
+        function estimateEnergy() {
+            const prompt = document.getElementById('prompt').value.trim();
+            const location = document.getElementById('location').value;
+            
+            if (!prompt) {
+                alert('Please enter a prompt');
+                return;
+            }
+
+            // Show loading
+            const btn = document.getElementById('estimateBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div>Calculating...';
+
+            // Simulate API call delay
+            setTimeout(() => {
+                const result = calculateEnergy(prompt, selectedModel, location);
+                displayResults(result);
+                
+                // Reset button
+                btn.disabled = false;
+                btn.innerHTML = 'Calculate Energy Consumption';
+            }, 1500);
+        }
+
+        // Display results
+        function displayResults(result) {
+            const resultsDiv = document.getElementById('results');
+            const resultGrid = document.getElementById('resultGrid');
+            const comparison = document.getElementById('comparison');
+            
+            // Create result cards
+            resultGrid.innerHTML = `
+                <div class="result-card">
+                    <h3>Energy Consumption</h3>
+                    <div class="result-value">${(result.energyConsumption * 1000).toFixed(2)}</div>
+                    <div class="result-unit">Wh (Watt-hours)</div>
+                </div>
+                <div class="result-card">
+                    <h3>Carbon Emissions</h3>
+                    <div class="result-value">${(result.carbonEmissions * 1000).toFixed(2)}</div>
+                    <div class="result-unit">g CO2</div>
+                </div>
+                <div class="result-card">
+                    <h3>Total Tokens</h3>
+                    <div class="result-value">${result.totalTokens.toLocaleString()}</div>
+                    <div class="result-unit">tokens processed</div>
+                </div>
+                <div class="result-card">
+                    <h3>Model Used</h3>
+                    <div class="result-value" style="font-size: 1.2em;">${result.model.name}</div>
+                    <div class="result-unit">${result.model.parameters}</div>
+                </div>
+            `;
+
+            // Create comparison
+            const energyWh = result.energyConsumption * 1000;
+            const carbonG = result.carbonEmissions * 1000;
+            
+            let comparisons = [];
+            
+            if (energyWh > 10) {
+                comparisons.push(`${(energyWh / 11).toFixed(1)} LED bulbs for 1 hour`);
+            }
+            if (energyWh > 0.5) {
+                comparisons.push(`${(energyWh / 0.5).toFixed(1)} smartphone charges`);
+            }
+            if (carbonG > 100) {
+                comparisons.push(`${(carbonG / 411).toFixed(2)} km of driving`);
+            }
+            if (carbonG > 10) {
+                comparisons.push(`${(carbonG / 21).toFixed(1)} Google searches`);
+            }
+
+            comparison.innerHTML = `
+                <h4>💡 Real-world Comparison</h4>
+                <p>This query consumes roughly the same energy as:</p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    ${comparisons.map(comp => `<li>${comp}</li>`).join('')}
+                </ul>
+            `;
+
+            resultsDiv.style.display = 'block';
+            resultsDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', init);
+
+        // Add enter key support for prompt textarea
+        document.getElementById('prompt').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                estimateEnergy();
+            }
+        });
+    </script>
+</body>
+</html>
